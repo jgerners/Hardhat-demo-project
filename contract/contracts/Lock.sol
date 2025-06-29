@@ -1,41 +1,55 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.24;
 
-// Uncomment this line to use console.log
-// import "hardhat/console.sol";
+import "hardhat/console.sol";
 
 contract Lock {
     uint public unlockTime;
     address payable public owner;
+    uint public totalDeposited;
 
     event Withdrawal(uint amount, uint when);
     event Deposit(address indexed from, uint amount, uint when);
 
-    constructor(uint _unlockTime) payable {
-        require(
-            block.timestamp < _unlockTime,
-            "Unlock time should be in the future"
-        );
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Not the owner");
+        _;
+    }
 
+    constructor(uint _unlockTime) payable {
         unlockTime = _unlockTime;
         owner = payable(msg.sender);
+
+        if (msg.value > 0) {
+            totalDeposited = msg.value;
+            console.log("Constructor deposit:", msg.value);
+        }
     }
+function withdraw() public payable{
+    uint balance = address(this).balance;
+    require(balance > 0, "No funds to withdraw");
 
-    function withdraw() public {
-        // Uncomment this line, and the import of "hardhat/console.sol", to print a log in your terminal
-        // console.log("Unlock time is %o and block timestamp is %o", unlockTime, block.timestamp);
+    (bool success, ) = payable(msg.sender).call{value: balance}("");
+    require(success, "Transfer failed.");
 
-        require(block.timestamp >= unlockTime, "You can't withdraw yet");
-        require(msg.sender == owner, "You aren't the owner");
-
-        emit Withdrawal(address(this).balance, block.timestamp);
-
-        owner.transfer(address(this).balance);
-    }
+    emit Withdrawal(balance, block.timestamp);
+}
 
     function deposit() public payable {
         require(msg.value > 0, "Deposit amount must be greater than zero");
 
+        totalDeposited += msg.value;
+
+        console.log("=== DEPOSIT DEBUG ===");
+        console.log("Depositor:", msg.sender);
+        console.log("Amount:", msg.value);
+        console.log("New balance:", address(this).balance);
+        console.log("Total deposited:", totalDeposited);
+
         emit Deposit(msg.sender, msg.value, block.timestamp);
+    }
+
+    function getBalance() public view returns (uint) {
+        return address(this).balance;
     }
 }

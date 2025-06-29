@@ -8,17 +8,18 @@ let signer;
 let contract;
 
 // Function to initialize the provider, signer, and contract
-const initialize = async () => {
+export const initialize = async () => {
   if (typeof window.ethereum !== "undefined") {
     provider = new BrowserProvider(window.ethereum);
     signer = await provider.getSigner();
     contract = new Contract(CONTRACT_ADDRESS, Lock_ABI, signer);
+    console.log("Loaded contract address:", CONTRACT_ADDRESS);
   } else {
     console.error("Please install MetaMask!");
   }
 };
 
-// Initialize once when the module is loaded
+// Initialize once when the module is  loaded
 initialize();
 
 // Function to request single account
@@ -47,7 +48,16 @@ export const depositFund = async (depositValue) => {
 
 // Function to withdraw funds from the contract
 export const withdrawFund = async () => {
+  if (!contract) {
+    console.error("Contract is not initialized.");
+    throw new Error("Contract not initialized");
+  }
+
+  console.log("Calling withdraw on contract at:", contract.address);
   const withdrawTx = await contract.withdraw();
   await withdrawTx.wait();
   console.log("Withdrawal successful!");
+
+  const balanceAfter = await getContractBalanceInETH();
+  console.log("Contract balance after withdrawal:", balanceAfter);
 };
